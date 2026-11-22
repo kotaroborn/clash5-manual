@@ -1,0 +1,327 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2685.6">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+  </style>
+</head>
+<body>
+<p class="p1"><br></p>
+<p class="p2">&lt;!DOCTYPE html&gt;</p>
+<p class="p2">&lt;html lang="ja"&gt;</p>
+<p class="p2">&lt;head&gt;</p>
+<p class="p2">&lt;meta charset="UTF-8"&gt;</p>
+<p class="p2">&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;</p>
+<p class="p2">&lt;title&gt;CLASH 5 | Instruction Manual&lt;/title&gt;</p>
+<p class="p1"><br></p>
+<p class="p2">&lt;style&gt;</p>
+<p class="p2">* { box-sizing: border-box; }</p>
+<p class="p1"><br></p>
+<p class="p2">body {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>margin: 0;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>background: #151515;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>color: #eee;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>font-family: Arial, sans-serif;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>min-height: 100vh;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>display: flex;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>flex-direction: column;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">header {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>text-align: center;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>padding: 20px 10px 12px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>letter-spacing: 3px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>font-size: 14px;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">#viewer {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>flex: 1;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>display: flex;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>align-items: center;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>justify-content: center;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>padding: 12px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>min-height: 0;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">#pages {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>display: flex;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>align-items: center;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>justify-content: center;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>gap: 3px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>width: min(1100px, 100%);</p>
+<p class="p2"><span class="Apple-converted-space">  </span>height: min(72vh, 720px);</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">.page {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>flex: 1;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>min-width: 0;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>height: 100%;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>display: flex;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>align-items: center;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>justify-content: center;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>background: #252525;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>box-shadow: 0 4px 20px #0008;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>overflow: hidden;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">.page canvas {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>display: block;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>max-width: 100%;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>max-height: 100%;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>object-fit: contain;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">.page.empty {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>visibility: hidden;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">#controls {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>display: flex;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>align-items: center;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>justify-content: center;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>gap: 28px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>padding: 20px;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">button {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>background: #333;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>color: white;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>border: 1px solid #666;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>border-radius: 4px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>padding: 12px 24px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>font-size: 20px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>cursor: pointer;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">button:hover:not(:disabled) {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>background: #555;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">button:disabled {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>opacity: .25;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>cursor: default;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">#counter {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>font-size: 13px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>color: #aaa;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>min-width: 70px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>text-align: center;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">#message {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>text-align: center;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>color: #aaa;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>padding: 30px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>font-size: 14px;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">@media (max-width: 650px) {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>#pages {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>height: 72vh;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>#pages.spread .page:nth-child(2) {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>display: none;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>#pages.spread .page {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>flex: 1;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>button {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>padding: 12px 20px;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>}</p>
+<p class="p2">}</p>
+<p class="p2">&lt;/style&gt;</p>
+<p class="p2">&lt;/head&gt;</p>
+<p class="p1"><br></p>
+<p class="p2">&lt;body&gt;</p>
+<p class="p1"><br></p>
+<p class="p2">&lt;header&gt;CLASH 5 — INSTRUCTION MANUAL&lt;/header&gt;</p>
+<p class="p1"><br></p>
+<p class="p2">&lt;div id="message"&gt;Loading manual...&lt;/div&gt;</p>
+<p class="p1"><br></p>
+<p class="p2">&lt;main id="viewer"&gt;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>&lt;div id="pages"&gt;</p>
+<p class="p2"><span class="Apple-converted-space">    </span>&lt;div class="page" id="pageA"&gt;&lt;/div&gt;</p>
+<p class="p2"><span class="Apple-converted-space">    </span>&lt;div class="page" id="pageB"&gt;&lt;/div&gt;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
+<p class="p2">&lt;/main&gt;</p>
+<p class="p1"><br></p>
+<p class="p2">&lt;div id="controls"&gt;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>&lt;button id="prev" aria-label="Previous page"&gt;❮&lt;/button&gt;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>&lt;span id="counter"&gt;0 / 0&lt;/span&gt;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>&lt;button id="next" aria-label="Next page"&gt;❯&lt;/button&gt;</p>
+<p class="p2">&lt;/div&gt;</p>
+<p class="p1"><br></p>
+<p class="p2">&lt;script type="module"&gt;</p>
+<p class="p2">import * as pdfjsLib from</p>
+<p class="p2"><span class="Apple-converted-space">  </span>"https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";</p>
+<p class="p1"><br></p>
+<p class="p2">pdfjsLib.GlobalWorkerOptions.workerSrc =</p>
+<p class="p2"><span class="Apple-converted-space">  </span>"https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";</p>
+<p class="p1"><br></p>
+<p class="p2">const pdfPath = "./manual.pdf";</p>
+<p class="p1"><br></p>
+<p class="p2">const pageA = document.getElementById("pageA");</p>
+<p class="p2">const pageB = document.getElementById("pageB");</p>
+<p class="p2">const pages = document.getElementById("pages");</p>
+<p class="p2">const counter = document.getElementById("counter");</p>
+<p class="p2">const message = document.getElementById("message");</p>
+<p class="p2">const prev = document.getElementById("prev");</p>
+<p class="p2">const next = document.getElementById("next");</p>
+<p class="p1"><br></p>
+<p class="p2">let pdf;</p>
+<p class="p2">let groups = [];</p>
+<p class="p2">let position = 0;</p>
+<p class="p2">let renderId = 0;</p>
+<p class="p1"><br></p>
+<p class="p2">function makeGroups(total) {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>const result = [[1]];</p>
+<p class="p2"><span class="Apple-converted-space">  </span>let p = 2;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>// 表紙を除き、最後の2ページは単独表示</p>
+<p class="p2"><span class="Apple-converted-space">  </span>while (total - p + 1 &gt; 2) {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>result.push([p, p + 1]);</p>
+<p class="p2"><span class="Apple-converted-space">    </span>p += 2;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>while (p &lt;= total) {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>result.push([p]);</p>
+<p class="p2"><span class="Apple-converted-space">    </span>p++;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>return result;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">async function renderPage(number, container, id) {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>container.innerHTML = "";</p>
+<p class="p2"><span class="Apple-converted-space">  </span>container.classList.remove("empty");</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>const page = await pdf.getPage(number);</p>
+<p class="p2"><span class="Apple-converted-space">  </span>if (id !== renderId) return;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>const base = page.getViewport({ scale: 1 });</p>
+<p class="p2"><span class="Apple-converted-space">  </span>const mobile = window.innerWidth &lt;= 650;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>const availableWidth = container.clientWidth - 12;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>const availableHeight = container.clientHeight - 12;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>const scale = Math.min(</p>
+<p class="p2"><span class="Apple-converted-space">    </span>availableWidth / base.width,</p>
+<p class="p2"><span class="Apple-converted-space">    </span>availableHeight / base.height</p>
+<p class="p2"><span class="Apple-converted-space">  </span>);</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>const viewport = page.getViewport({ scale });</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>const canvas = document.createElement("canvas");</p>
+<p class="p2"><span class="Apple-converted-space">  </span>const context = canvas.getContext("2d");</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>const ratio = window.devicePixelRatio || 1;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>canvas.width = Math.floor(viewport.width * ratio);</p>
+<p class="p2"><span class="Apple-converted-space">  </span>canvas.height = Math.floor(viewport.height * ratio);</p>
+<p class="p2"><span class="Apple-converted-space">  </span>canvas.style.width = viewport.width + "px";</p>
+<p class="p2"><span class="Apple-converted-space">  </span>canvas.style.height = viewport.height + "px";</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>container.appendChild(canvas);</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>await page.render({</p>
+<p class="p2"><span class="Apple-converted-space">    </span>canvasContext: context,</p>
+<p class="p2"><span class="Apple-converted-space">    </span>viewport: viewport,</p>
+<p class="p2"><span class="Apple-converted-space">    </span>transform: [ratio, 0, 0, ratio, 0, 0]</p>
+<p class="p2"><span class="Apple-converted-space">  </span>}).promise;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">async function renderSpread() {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>if (!pdf) return;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>const id = ++renderId;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>const group = groups[position];</p>
+<p class="p2"><span class="Apple-converted-space">  </span>const mobile = window.innerWidth &lt;= 650;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>pages.classList.toggle(</p>
+<p class="p2"><span class="Apple-converted-space">    </span>"spread",</p>
+<p class="p2"><span class="Apple-converted-space">    </span>group.length === 2</p>
+<p class="p2"><span class="Apple-converted-space">  </span>);</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>pageA.innerHTML = "";</p>
+<p class="p2"><span class="Apple-converted-space">  </span>pageB.innerHTML = "";</p>
+<p class="p2"><span class="Apple-converted-space">  </span>pageB.classList.remove("empty");</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>await renderPage(group[0], pageA, id);</p>
+<p class="p2"><span class="Apple-converted-space">  </span>if (id !== renderId) return;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>if (group.length === 2 &amp;&amp; !mobile) {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>await renderPage(group[1], pageB, id);</p>
+<p class="p2"><span class="Apple-converted-space">  </span>} else {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>pageB.classList.add("empty");</p>
+<p class="p2"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>if (id !== renderId) return;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>const first = group[0];</p>
+<p class="p2"><span class="Apple-converted-space">  </span>const last = group[group.length - 1];</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>counter.textContent =</p>
+<p class="p2"><span class="Apple-converted-space">    </span>`${first}${first !== last ? "–" + last : ""} / ${pdf.numPages}`;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>prev.disabled = position === 0;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>next.disabled = position === groups.length - 1;</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">function changePage(direction) {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>const nextPosition = position + direction;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>if (nextPosition &lt; 0 || nextPosition &gt;= groups.length) {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>return;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">  </span>position = nextPosition;</p>
+<p class="p2"><span class="Apple-converted-space">  </span>renderSpread();</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">prev.addEventListener("click", () =&gt; changePage(-1));</p>
+<p class="p2">next.addEventListener("click", () =&gt; changePage(1));</p>
+<p class="p1"><br></p>
+<p class="p2">document.addEventListener("keydown", event =&gt; {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>if (event.key === "ArrowLeft") changePage(-1);</p>
+<p class="p2"><span class="Apple-converted-space">  </span>if (event.key === "ArrowRight") changePage(1);</p>
+<p class="p2">});</p>
+<p class="p1"><br></p>
+<p class="p2">let resizeTimer;</p>
+<p class="p2">window.addEventListener("resize", () =&gt; {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>clearTimeout(resizeTimer);</p>
+<p class="p2"><span class="Apple-converted-space">  </span>resizeTimer = setTimeout(renderSpread, 150);</p>
+<p class="p2">});</p>
+<p class="p1"><br></p>
+<p class="p2">async function init() {</p>
+<p class="p2"><span class="Apple-converted-space">  </span>try {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>pdf = await pdfjsLib.getDocument(pdfPath).promise;</p>
+<p class="p2"><span class="Apple-converted-space">    </span>groups = makeGroups(pdf.numPages);</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">    </span>message.style.display = "none";</p>
+<p class="p2"><span class="Apple-converted-space">    </span>position = 0;</p>
+<p class="p1"><br></p>
+<p class="p2"><span class="Apple-converted-space">    </span>await renderSpread();</p>
+<p class="p2"><span class="Apple-converted-space">  </span>} catch (error) {</p>
+<p class="p2"><span class="Apple-converted-space">    </span>message.textContent =</p>
+<p class="p2"><span class="Apple-converted-space">      </span>"Manual not found. Please upload manual.pdf.";</p>
+<p class="p2"><span class="Apple-converted-space">    </span>console.error(error);</p>
+<p class="p2"><span class="Apple-converted-space">  </span>}</p>
+<p class="p2">}</p>
+<p class="p1"><br></p>
+<p class="p2">init();</p>
+<p class="p2">&lt;/script&gt;</p>
+<p class="p1"><br></p>
+<p class="p2">&lt;/body&gt;</p>
+<p class="p2">&lt;/html&gt;</p>
+</body>
+</html>
