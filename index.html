@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLASH 5 | Instruction Manual</title>
+<style>
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin:0; min-height:100%; }
+body {
+  min-height:100vh; background:#151515; color:#eee;
+  font-family:Arial,"Noto Sans JP",sans-serif;
+  display:flex; flex-direction:column;
+}
+header {
+  text-align:center; padding:18px 12px 10px;
+  font-size:13px; letter-spacing:3px;
+}
+#message {
+  margin:auto; padding:24px; text-align:center;
+  color:#bbb; line-height:1.7;
+}
+#viewer {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  padding:12px; min-height:0;
+}
+#pages {
+  width:min(1100px,100%); height:min(72vh,760px);
+  display:flex; align-items:center; justify-content:center; gap:3px;
+}
+.page {
+  flex:1; min-width:0; height:100%; display:flex;
+  align-items:center; justify-content:center;
+  overflow:hidden; background:#242424;
+  box-shadow:0 4px 22px #0009;
+}
+.page canvas { display:block; max-width:100%; max-height:100%; }
+.page.empty { visibility:hidden; }
+#controls {
+  display:flex; align-items:center; justify-content:center;
+  gap:22px; padding:16px 12px 24px;
+}
+button {
+  min-width:54px; min-height:46px; padding:8px 18px;
+  border:1px solid #666; border-radius:5px;
+  background:#303030; color:#fff; font-size:22px;
+}
+button:disabled { opacity:.3; }
+#counter { min-width:82px; text-align:center; color:#bbb; font-size:13px; }
+@media(max-width:650px) {
+  #pages { height:72vh; }
+  #pages.spread .page:nth-child(2) { display:none; }
+  #pages.spread .page { flex:1; }
+  #controls { padding-bottom:20px; }
+}
+</style>
+</head>
+<body>
+<header>CLASH 5 — INSTRUCTION MANUAL</header>
+<div id="message">説明書を読み込んでいます…</div>
+<main id="viewer">
+  <div id="pages">
+    <div class="page" id="pageA"></div>
+    <div class="page" id="pageB"></div>
+  </div>
+</main>
+<nav id="controls" aria-label="ページ操作">
+  <button id="prev" type="button" aria-label="前のページ">❮</button>
+  <span id="counter">0 / 0</span>
+  <button id="next" type="button" aria-label="次のページ">❯</button>
+</nav>
+<script type="module">
+import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+
+const message = document.getElementById("message");
+const pagesEl = document.getElementById("pages");
+const pageA = document.getElementById("pageA");
+const pageB = document.getElementById("pageB");
+const counter = document.getElementById("counter");
+const prev = document.getElementById("prev");
+const next = document.getElementById("next");
+
+let pdf = null;
+let spreads = [];
+let spreadIndex = 0;
+let renderToken = 0;
+
+function makeSpreads(total) {
+  if (total <= 0) return [];
+  const result = [[1]];
+  let page = 2;
+  while (page + 1 < total) {
+    result.push([page, page + 1]);
+    page += 2;
+  }
+  if (page <= total) result.push([page]);
+  return result;
+}
+
+async function drawPage(pageNumber, container, token) {
+  container.replaceChildren();
+  container.classList.remove("empty");
+  const page = await pdf.getPage(pageNumber);
+  if (token !== renderToken) return;
+
+  const base = page.getViewport({scale:1});
+  const width = Math.max(100, container.clientWidth - 16);
+  const height = Math.max(100, container.clientHeight - 16);
+  const scale = Math.min(width / base.width, height / base.height);
+  const viewport = page.getViewport({scale});
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.floor(viewport.width * dpr);
+  canvas.height = Math.floor(viewport.height * dpr);
+  canvas.style.width = `${viewport.width}px`;
+  canvas.style.height = `${viewport.height}px`;
+  container.appendChild(canvas);
+
+  await page.render({
+    canvasContext: canvas.getContext("2d"),
+    viewport,
+    transform: [dpr, 0, 0, dpr, 0, 0]
+  }).promise;
+}
+
+async function renderSpread() {
+  if (!pdf || !spreads.length) return;
+  const token = ++renderToken;
+  const spread = spreads[spreadIndex];
+  const isMobile = window.matchMedia("(max-width:650px)").matches;
+
+  pagesEl.classList.toggle("spread", spread.length === 2);
+  pageA.replaceChildren();
+  pageB.replaceChildren();
+  pageB.classList.remove("empty");
+
+  await drawPage(spread[0], pageA, token);
+  if (token !== renderToken) return;
+
+  if (spread.length === 2 && !isMobile) {
+    await drawPage(spread[1], pageB, token);
+  } else {
+    pageB.classList.add("empty");
+  }
+  if (token !== renderToken) return;
+
+  const first = spread[0];
+  const last = spread[spread.length - 1];
+  counter.textContent = first === last
+    ? `${first} / ${pdf.numPages}`
+    : `${first}–${last} / ${pdf.numPages}`;
+  prev.disabled = spreadIndex === 0;
+  next.disabled = spreadIndex === spreads.length - 1;
+}
+
+function move(amount) {
+  const target = spreadIndex + amount;
+  if (target < 0 || target >= spreads.length) return;
+  spreadIndex = target;
+  renderSpread();
+}
+
+prev.addEventListener("click", () => move(-1));
+next.addEventListener("click", () => move(1));
+document.addEventListener("keydown", event => {
+  if (event.key === "ArrowLeft") move(-1);
+  if (event.key === "ArrowRight") move(1);
+});
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(renderSpread, 180);
+});
+
+async function start() {
+  try {
+    pdf = await pdfjsLib.getDocument("./manual.pdf").promise;
+    spreads = makeSpreads(pdf.numPages);
+    message.hidden = true;
+    await renderSpread();
+  } catch (error) {
+    console.error(error);
+    message.innerHTML =
+      "PDFを読み込めません。GitHubに <strong>manual.pdf</strong> があり、<br>" +
+      "ファイル名が正確に一致しているか確認してください。";
+    counter.textContent = "—";
+    prev.disabled = true;
+    next.disabled = true;
+  }
+}
+start();
+</script>
+</body>
+</html>
