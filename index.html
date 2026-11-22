@@ -7,7 +7,9 @@
 <title>CLASH 5 | Instruction Manual</title>
 
 <style>
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -21,9 +23,10 @@ body {
 
 header {
   text-align: center;
-  padding: 20px 10px;
+  padding: 18px 10px;
   letter-spacing: 3px;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 #viewer {
@@ -31,8 +34,8 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 15px;
   min-height: 0;
+  padding: 8px;
   overflow: hidden;
 }
 
@@ -40,6 +43,7 @@ header {
   margin: auto;
 }
 
+/* PDFページ */
 .page {
   background: #fff;
   overflow: hidden;
@@ -50,19 +54,18 @@ header {
 
 .page canvas {
   display: block;
-  max-width: 100%;
-  max-height: 100%;
   width: 100%;
   height: 100%;
-  object-fit: contain;
 }
 
+/* 操作ボタン */
 #controls {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 28px;
-  padding: 20px;
+  padding: 18px;
+  flex-shrink: 0;
 }
 
 button {
@@ -75,12 +78,13 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #555;
 }
 
 button:disabled {
-  opacity: .3;
+  opacity: .25;
+  cursor: default;
 }
 
 #counter {
@@ -94,7 +98,6 @@ button:disabled {
   text-align: center;
   color: #aaa;
   padding: 30px;
-  line-height: 1.8;
 }
 
 @media(max-width:650px) {
@@ -103,7 +106,7 @@ button:disabled {
   }
 
   #viewer {
-    padding: 5px;
+    padding: 3px;
   }
 
   #controls {
@@ -151,9 +154,8 @@ const next = document.getElementById("next");
 
 let pageFlip = null;
 let pdf = null;
-
-const PAGE_WIDTH = 600;
-const PAGE_HEIGHT = 800;
+let pageWidth = 600;
+let pageHeight = 800;
 
 async function init() {
 
@@ -161,77 +163,83 @@ async function init() {
 
     message.textContent = "PDFを読み込んでいます...";
 
-    // PDF読み込み
     pdf = await pdfjsLib.getDocument("./manual.pdf").promise;
 
-    message.textContent = "ページを準備しています...";
+    // PDF本来の縦横比を取得
+    const firstPage = await pdf.getPage(1);
+    const originalSize = firstPage.getViewport({scale: 1});
 
-    // PDFの各ページをHTMLに変換
+    const aspectRatio =
+      originalSize.width / originalSize.height;
+
+    // ページサイズをPDFに合わせる
+    pageWidth = 600;
+    pageHeight = Math.round(pageWidth / aspectRatio);
+
+    // 各ページを画像化
     for (let i = 1; i <= pdf.numPages; i++) {
 
       const pdfPage = await pdf.getPage(i);
 
-      const viewport = pdfPage.getViewport({ scale: 1 });
+      const baseViewport = pdfPage.getViewport({
+        scale: 1
+      });
 
-      const scale = Math.min(
-        PAGE_WIDTH / viewport.width,
-        PAGE_HEIGHT / viewport.height
-      );
+      const renderScale = pageWidth / baseViewport.width;
 
-      const scaledViewport = pdfPage.getViewport({
-        scale: scale
+      const viewport = pdfPage.getViewport({
+        scale: renderScale
       });
 
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
 
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const ratio = Math.min(
+        window.devicePixelRatio || 1,
+        2
+      );
 
-      canvas.width = Math.round(scaledViewport.width * ratio);
-      canvas.height = Math.round(scaledViewport.height * ratio);
+      canvas.width = Math.round(viewport.width * ratio);
+      canvas.height = Math.round(viewport.height * ratio);
 
       canvas.style.width = "100%";
       canvas.style.height = "100%";
 
       await pdfPage.render({
         canvasContext: context,
-        viewport: scaledViewport,
+        viewport: viewport,
         transform: [ratio, 0, 0, ratio, 0, 0]
       }).promise;
 
       const page = document.createElement("div");
-
       page.className = "page";
 
-      // 表紙と最終ページは硬い表紙として扱う
       if (i === 1 || i === pdf.numPages) {
         page.dataset.density = "hard";
       }
 
       page.appendChild(canvas);
       bookElement.appendChild(page);
-
     }
 
-    // PDF読み込み完了
     message.style.display = "none";
 
-    // 3Dページめくりを初期化
+    // 3Dブックを初期化
     pageFlip = new St.PageFlip(bookElement, {
 
-      width: PAGE_WIDTH,
-      height: PAGE_HEIGHT,
+      width: pageWidth,
+      height: pageHeight,
 
       size: "stretch",
 
       minWidth: 280,
       maxWidth: 1200,
 
-      minHeight: 350,
+      minHeight: 300,
       maxHeight: 1200,
 
       drawShadow: true,
-      maxShadowOpacity: 0.45,
+      maxShadowOpacity: 0.35,
 
       flippingTime: 600,
 
@@ -250,9 +258,7 @@ async function init() {
       bookElement.querySelectorAll(".page")
     );
 
-    // ページ番号更新
     pageFlip.on("flip", updateCounter);
-
     pageFlip.on("init", updateCounter);
 
     updateCounter();
@@ -262,20 +268,18 @@ async function init() {
     console.error(error);
 
     message.style.display = "block";
-
     message.textContent =
-      "説明書を読み込めませんでした。manual.pdf の配置を確認してください。";
+      "説明書を読み込めませんでした。manual.pdfを確認してください。";
 
   }
-
 }
 
+// ページ番号更新
 function updateCounter() {
 
   if (!pageFlip) return;
 
   const current = pageFlip.getCurrentPageIndex();
-
   const total = pageFlip.getPageCount();
 
   counter.textContent =
@@ -283,20 +287,26 @@ function updateCounter() {
 
   prev.disabled = current === 0;
   next.disabled = current >= total - 1;
-
 }
 
-// 左右ボタン
+// 前後とも同じ3D回転でめくる
 prev.addEventListener("click", () => {
-  if (pageFlip) {
+
+  if (pageFlip && pageFlip.getCurrentPageIndex() > 0) {
     pageFlip.flipPrev("top");
   }
+
 });
 
 next.addEventListener("click", () => {
-  if (pageFlip) {
+
+  if (
+    pageFlip &&
+    pageFlip.getCurrentPageIndex() < pageFlip.getPageCount() - 1
+  ) {
     pageFlip.flipNext("top");
   }
+
 });
 
 // キーボード操作
