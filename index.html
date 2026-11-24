@@ -1,261 +1,549 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CLASH 5 MANUAL</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0d">
+<title>CLASH 5 オンラインマニュアル</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0b0b0d;color:#e6e6e6;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  -webkit-text-size-adjust:100%;overscroll-behavior:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 
-  <style>
-    * { box-sizing: border-box; }
+/* ---- ステージ（ページ表示領域） ---- */
+#stage{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+#stage.grabbing{cursor:grabbing}
+#book{position:relative;flex:none;will-change:transform}
+.slot,.shade{position:absolute;top:0;height:100%;pointer-events:none}
+.slot{background-repeat:no-repeat;background-size:100% 100%}
+#shadeR{background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,0) 65%);opacity:0}
+#shadeL{background:linear-gradient(270deg,rgba(0,0,0,.55),rgba(0,0,0,0) 65%);opacity:0}
+#crease{position:absolute;top:0;height:100%;pointer-events:none;display:none;
+  background:linear-gradient(90deg,rgba(0,0,0,0),rgba(0,0,0,.28) 50%,rgba(0,0,0,0))}
 
-    html, body {
-      width: 100%;
-      min-height: 100%;
-      margin: 0;
-      background: #171717;
-      color: #fff;
-      font-family: sans-serif;
-      overflow-x: hidden;
-    }
+/* ---- めくり用の紙（細い短冊を並べて湾曲させる） ---- */
+#leaf{position:absolute;top:0;left:0;width:0;height:100%;display:none;pointer-events:none;transform-style:preserve-3d}
+.strip{position:absolute;left:0;top:0;height:100%;transform-style:preserve-3d;transform-origin:0 50%;will-change:transform}
+.face{position:absolute;left:0;top:0;width:100%;height:100%;background-repeat:no-repeat;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.face.b{transform:rotateY(180deg)}
+.face::after{content:"";position:absolute;left:0;top:0;width:100%;height:100%;background:#000;opacity:var(--sh,0)}
 
-    body {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+/* ---- 操作バー ---- */
+#bar{flex:none;display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:#0b0b0d;border-top:1px solid #1d1d22}
+#bar button{min-width:104px;height:44px;border:1px solid #3a3a44;background:#1a1a20;color:#f0f0f0;border-radius:10px;
+  font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#bar button:disabled{opacity:.3;cursor:default}
+#bar button:not(:disabled):active{background:#2c2c38}
+#pageLabel{min-width:96px;text-align:center;font-variant-numeric:tabular-nums;font-size:14px;color:#cfcfd6}
+@media (max-width:700px){
+  #bar{gap:8px;padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
+  #bar button{flex:1;max-width:150px;min-width:0;height:40px}
+  #pageLabel{min-width:84px}
+}
 
-    header {
-      width: 100%;
-      padding: 14px 16px 8px;
-      text-align: center;
-      font-size: 13px;
-      letter-spacing: 0.18em;
-      color: #c9c9c9;
-    }
-
-    #viewer {
-      width: 100%;
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px;
-    }
-
-    #book {
-      margin: 0 auto;
-    }
-
-    .page {
-      background: #fff;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .page canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: fill;
-    }
-
-    #controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 18px;
-      padding: 12px 16px 22px;
-    }
-
-    button {
-      appearance: none;
-      border: 1px solid #777;
-      background: #292929;
-      color: #fff;
-      min-width: 100px;
-      padding: 11px 18px;
-      border-radius: 4px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.3;
-      cursor: default;
-    }
-
-    #page-count {
-      min-width: 72px;
-      text-align: center;
-      color: #ddd;
-      font-size: 13px;
-      font-variant-numeric: tabular-nums;
-    }
-
-    #status {
-      padding: 0 16px 14px;
-      color: #aaa;
-      font-size: 12px;
-      text-align: center;
-    }
-
-    @media (max-width: 600px) {
-      header { padding-top: 10px; }
-      #viewer { padding: 6px; }
-      #controls { gap: 10px; padding-bottom: 16px; }
-      button { min-width: 82px; padding: 10px 12px; }
-    }
-  </style>
+/* ---- 読み込み・エラー表示 ---- */
+#overlay{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:24px;text-align:center;background:#0b0b0d;line-height:1.7}
+#overlay.hidden{display:none}
+.spinner{width:34px;height:34px;border:3px solid #333;border-top-color:#ddd;border-radius:50%;animation:spin .9s linear infinite}
+#overlay.err .spinner{display:none}
+#ovMsg{font-size:16px}
+#overlay.err #ovMsg{color:#ff9a8a;font-weight:700}
+#ovSub{font-size:13px;color:#a9a9b3;max-width:34em}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
 </head>
-
 <body>
-  <header>CLASH 5 OFFICIAL MANUAL</header>
-
-  <main id="viewer">
-    <div id="book"></div>
+<div id="app">
+  <main id="stage">
+    <div id="book">
+      <div class="slot" id="slotL"></div>
+      <div class="slot" id="slotR"></div>
+      <div class="shade" id="shadeL"></div>
+      <div class="shade" id="shadeR"></div>
+      <div id="leaf"></div>
+      <div id="crease"></div>
+    </div>
+    <div id="overlay"><div class="spinner"></div><p id="ovMsg">マニュアルを読み込み中…</p><p id="ovSub"></p></div>
   </main>
-
-  <nav id="controls" aria-label="ページ操作">
-    <button id="prev" type="button">戻る</button>
-    <span id="page-count">読み込み中</span>
-    <button id="next" type="button">次へ</button>
+  <nav id="bar">
+    <button id="btnPrev" type="button" aria-label="前のページへ戻る" disabled>◀ 戻る</button>
+    <span id="pageLabel" aria-live="polite">- / -</span>
+    <button id="btnNext" type="button" aria-label="次のページへ進む" disabled>進む ▶</button>
   </nav>
+</div>
 
-  <div id="status">マニュアルを読み込んでいます…</div>
+<script>
+(() => {
+'use strict';
 
-  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+/* ================= 設定 ================= */
+const PDF_URL  = 'manual.pdf';      // index.html と同じフォルダ
+const V        = '3.11.174';        // PDF.js バージョン
+const CDNS = [
+  { lib:`https://cdn.jsdelivr.net/npm/pdfjs-dist@${V}/build/pdf.min.js`,
+    worker:`https://cdn.jsdelivr.net/npm/pdfjs-dist@${V}/build/pdf.worker.min.js`,
+    base:`https://cdn.jsdelivr.net/npm/pdfjs-dist@${V}/` },
+  { lib:`https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${V}/pdf.min.js`,
+    worker:`https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${V}/pdf.worker.min.js`,
+    base:null }
+];
+const DURATION = 800;   // めくり時間(ms)。進む・戻る共通
+const STRIPS   = 28;    // 紙を何分割して湾曲させるか
+const OV       = 1;     // 短冊の継ぎ目対策の重なり(px)
+const PAPER    = '#f3f0e8';
 
-  <script type="module">
-    import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
+/* ================= DOM ================= */
+const $ = id => document.getElementById(id);
+const stage=$('stage'), book=$('book'), slotL=$('slotL'), slotR=$('slotR'),
+      shadeL=$('shadeL'), shadeR=$('shadeR'), leaf=$('leaf'), crease=$('crease'),
+      overlay=$('overlay'), ovMsg=$('ovMsg'), ovSub=$('ovSub'),
+      btnPrev=$('btnPrev'), btnNext=$('btnNext'), pageLabel=$('pageLabel');
 
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+/* ================= 状態 ================= */
+let pdf=null, N=0, ratio=210/297;
+let mode='spread';            // 'spread'(PC見開き) | 'single'(スマホ1枚)
+let states=[], cur=0;         // states[i] = {l, r}  数値=ページ / 'blank'=白紙 / 'none'=なし
+let pageW=0, pageH=0, stripW=0;
+let strips=[];
+let tr=null;                  // 進行中のめくり
+let pending=0;                // 連打の予約(1回分)
+let pd=null;                  // ポインタ操作
+let fatal=false, leafTok=0;
 
-    const PDF_URL = "./manual.pdf";
-    const bookElement = document.getElementById("book");
-    const prevButton = document.getElementById("prev");
-    const nextButton = document.getElementById("next");
-    const pageCount = document.getElementById("page-count");
-    const status = document.getElementById("status");
+/* ================= エラー表示 ================= */
+function fail(msg, sub){
+  fatal=true;
+  overlay.classList.remove('hidden'); overlay.classList.add('err');
+  ovMsg.textContent=msg; ovSub.textContent=sub||'';
+  btnPrev.disabled=btnNext.disabled=true;
+}
 
-    let pageFlip = null;
-    let totalPages = 0;
-
-    function updateControls(currentPage) {
-      pageCount.textContent = `${currentPage + 1} / ${totalPages}`;
-      prevButton.disabled = currentPage <= 0;
-      nextButton.disabled = currentPage >= totalPages - 1;
-    }
-
-    async function buildManual() {
-      try {
-        const pdf = await pdfjsLib.getDocument(PDF_URL).promise;
-        totalPages = pdf.numPages;
-
-        // PDFの実際の縦横比を1ページ目から取得する
-        const firstPage = await pdf.getPage(1);
-        const baseViewport = firstPage.getViewport({ scale: 1 });
-        const aspectRatio = baseViewport.width / baseViewport.height;
-
-        // 画面サイズに合わせて本の寸法を決める
-        const availableWidth = Math.min(window.innerWidth - 28, 1100);
-        const availableHeight = Math.max(300, window.innerHeight - 150);
-
-        let pageWidth = Math.min(availableWidth / 2, 600);
-        let pageHeight = pageWidth / aspectRatio;
-
-        if (pageHeight > availableHeight) {
-          pageHeight = availableHeight;
-          pageWidth = pageHeight * aspectRatio;
-        }
-
-        // スマートフォンでは1ページ表示にする
-        const isNarrow = window.innerWidth <= 700;
-        if (isNarrow) {
-          pageWidth = Math.min(window.innerWidth - 20, 600);
-          pageHeight = pageWidth / aspectRatio;
-          if (pageHeight > availableHeight) {
-            pageHeight = availableHeight;
-            pageWidth = pageHeight * aspectRatio;
-          }
-        }
-
-        const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-
-        for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
-          const pdfPage = pageNumber === 1 ? firstPage : await pdf.getPage(pageNumber);
-          const viewport = pdfPage.getViewport({
-            scale: (pageWidth * pixelRatio) / baseViewport.width
-          });
-
-          const pageElement = document.createElement("div");
-          pageElement.className = "page";
-
-          // HARD指定は一切付けない。表紙も通常ページと同じ3D紙めくりにする。
-          const canvas = document.createElement("canvas");
-          const context = canvas.getContext("2d", { alpha: false });
-
-          canvas.width = Math.round(viewport.width);
-          canvas.height = Math.round(viewport.height);
-
-          await pdfPage.render({
-            canvasContext: context,
-            viewport
-          }).promise;
-
-          pageElement.appendChild(canvas);
-          bookElement.appendChild(pageElement);
-        }
-
-        status.textContent = "";
-
-        // showCover:false が重要。
-        // trueにすると表紙が硬いページ扱いになり、通常ページと動きが変わる。
-        pageFlip = new St.PageFlip(bookElement, {
-          width: Math.round(pageWidth),
-          height: Math.round(pageHeight),
-          size: "fixed",
-          minWidth: 240,
-          maxWidth: 1200,
-          minHeight: 300,
-          maxHeight: 1600,
-          drawShadow: true,
-          maxShadowOpacity: 0.35,
-          flippingTime: 700,
-          usePortrait: true,
-          startPage: 0,
-          showCover: false,
-          mobileScrollSupport: false,
-          swipeDistance: 30,
-          showPageCorners: true,
-          disableFlipByClick: false,
-          autoSize: true
-        });
-
-        pageFlip.loadFromHTML(document.querySelectorAll(".page"));
-        pageFlip.on("flip", (event) => updateControls(event.data));
-        updateControls(0);
-
-        // 進む・戻るともに同じStPageFlipの3D反転機能を使用する
-        nextButton.addEventListener("click", () => pageFlip.flipNext("top"));
-        prevButton.addEventListener("click", () => pageFlip.flipPrev("top"));
-
-        document.addEventListener("keydown", (event) => {
-          if (event.key === "ArrowRight") pageFlip.flipNext("top");
-          if (event.key === "ArrowLeft") pageFlip.flipPrev("top");
-        });
-      } catch (error) {
-        console.error(error);
-        status.textContent =
-          "読み込みに失敗しました。manual.pdf が index.html と同じ場所にあるか確認してください。";
+/* ================= PDF.js 読み込み ================= */
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src=src; s.async=true; s.onload=res; s.onerror=()=>rej(new Error('load failed: '+src));
+    document.head.appendChild(s);
+  });
+}
+async function loadPdfJs(){
+  for(const c of CDNS){
+    try{
+      await loadScript(c.lib);
+      if(window.pdfjsLib){
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc=c.worker;
+        return c;
       }
-    }
+    }catch(e){ console.warn(e); }
+  }
+  throw new Error('pdfjs unavailable');
+}
 
-    buildManual();
-  </script>
+/* ================= ページ画像のキャッシュ ================= */
+const cache=new Map();        // pageIndex -> {w,url,p,job}
+const queue=[]; let active=0; const MAXC=2;
+function schedule(fn,urgent){
+  let job; const p=new Promise(res=>{ job={fn,res}; });
+  urgent?queue.unshift(job):queue.push(job);
+  pump(); return {p,job};
+}
+function pump(){
+  while(active<MAXC && queue.length){
+    const j=queue.shift(); active++;
+    j.fn().then(j.res,()=>j.res(null)).finally(()=>{active--;pump();});
+  }
+}
+function targetPx(){
+  const dpr=Math.min(window.devicePixelRatio||1,2.5);
+  return Math.min(2400,Math.max(700,Math.ceil(pageW*dpr/200)*200));
+}
+async function renderPage(i,need){
+  try{
+    const page=await pdf.getPage(i+1);
+    const v1=page.getViewport({scale:1});
+    const vp=page.getViewport({scale:need/v1.width});
+    const c=document.createElement('canvas');
+    c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+    const ctx=c.getContext('2d',{alpha:false});
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
+    await page.render({canvasContext:ctx,viewport:vp,background:'#ffffff'}).promise;
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
+    c.width=c.height=0;
+    try{page.cleanup();}catch(_){}
+    return blob?URL.createObjectURL(blob):null;
+  }catch(e){ console.error('page render failed',i+1,e); return null; }
+}
+function getImage(p,urgent){
+  const need=targetPx();
+  const e=cache.get(p);
+  if(e && e.w>=need*0.85){
+    if(urgent && e.job){ const k=queue.indexOf(e.job); if(k>0){queue.splice(k,1);queue.unshift(e.job);} }
+    return e.p;
+  }
+  const ne={w:need,url:e?e.url:null,p:null,job:null};
+  const s=schedule(()=>renderPage(p,need),urgent);
+  ne.job=s.job;
+  ne.p=s.p.then(u=>{
+    if(u){ if(ne.url) { const old=ne.url; setTimeout(()=>URL.revokeObjectURL(old),15000);} ne.url=u; }
+    ne.job=null; return ne.url;
+  });
+  cache.set(p,ne);
+  return ne.p;
+}
+const urlOf=p=>{const e=cache.get(p);return e&&e.url||null;};
+const isPage=v=>typeof v==='number';
+function ensureImages(types){
+  return Promise.all(types.filter(isPage).map(p=>getImage(p,true)));
+}
+function prefetch(){
+  const keep=new Set();
+  for(const d of [0,1,-1,2,-2]){
+    const s=states[cur+d]; if(!s) continue;
+    for(const v of [s.l,s.r]) if(isPage(v)){ keep.add(v); getImage(v,false); }
+  }
+  for(const [p,e] of cache){
+    if(!keep.has(p) && !(tr&&[tr.front,tr.back,tr.sl,tr.sr].includes(p))){
+      if(e.url) URL.revokeObjectURL(e.url);
+      cache.delete(p);
+    }
+  }
+}
+
+/* ================= 状態(ページ構成) ================= */
+function buildStates(m){
+  const s=[];
+  if(m==='single'){
+    for(let i=0;i<N;i++) s.push({l:'none',r:i});
+  }else{
+    s.push({l:'none',r:0});                          // 表紙（単独）
+    for(let i=1;i<N-1;i+=2) s.push({l:i,r:(i+1<=N-2)?i+1:'blank'});
+    if(N>=2) s.push({l:N-1,r:'none'});               // 裏表紙（単独）
+  }
+  return s;
+}
+function pageOfState(i){
+  const st=states[i]; if(!st) return 0;
+  return isPage(st.l)?st.l:(isPage(st.r)?st.r:0);
+}
+function stateOfPage(p){
+  for(let i=0;i<states.length;i++){ if(states[i].l===p||states[i].r===p) return i; }
+  return 0;
+}
+function shiftOf(i){
+  if(mode!=='spread') return 0;
+  const st=states[i]; if(!st) return 0;
+  if(st.l==='none') return -pageW/2;     // 表紙：右ページを中央へ
+  if(st.r==='none') return  pageW/2;     // 裏表紙：左ページを中央へ
+  return 0;
+}
+function decideMode(){
+  const w=innerWidth,h=innerHeight;
+  const coarse=matchMedia('(pointer: coarse)').matches;
+  if(w<700) return 'single';
+  if(coarse && Math.min(w,h)<600) return 'single';
+  if(h>w && w<820) return 'single';
+  return 'spread';
+}
+
+/* ================= 描画ヘルパ ================= */
+function paintSlot(el,type){
+  const s=el.style;
+  if(isPage(type)){
+    const u=urlOf(type);
+    s.backgroundColor='#fff';
+    s.backgroundImage=u?`url("${u}")`:'none';
+  }else{
+    s.backgroundImage='none';
+    s.backgroundColor=(type==='blank')?PAPER:'transparent';
+  }
+}
+function paintFace(el,type,posX){
+  const s=el.style;
+  if(isPage(type)){
+    const u=urlOf(type);
+    s.backgroundColor='#fff';
+    s.backgroundImage=u?`url("${u}")`:'none';
+    s.backgroundSize=`${pageW}px ${pageH}px`;
+    s.backgroundPosition=`${posX}px 0`;
+  }else{
+    s.backgroundColor=(type==='none')?'transparent':PAPER;
+    s.backgroundImage=(type==='back')?'linear-gradient(90deg,#d9d6cc,#f4f1e9 60%)':'none';
+    s.backgroundSize=`${pageW}px 100%`;
+    s.backgroundPosition=`${posX}px 0`;
+  }
+}
+function setRest(i){
+  const st=states[i]; if(!st) return;
+  paintSlot(slotL,st.l); paintSlot(slotR,st.r);
+  shadeL.style.opacity=0; shadeR.style.opacity=0;
+  book.style.transform=`translateX(${shiftOf(i)}px)`;
+}
+function label(){
+  const st=states[cur]; if(!st) return '- / -';
+  const n=[st.l,st.r].filter(isPage);
+  return n.length===2?`${n[0]+1}–${n[1]+1} / ${N}`:`${(n[0]||0)+1} / ${N}`;
+}
+function updateUI(){
+  pageLabel.textContent=label();
+  btnPrev.disabled=fatal||cur<=0;
+  btnNext.disabled=fatal||cur>=states.length-1;
+}
+
+/* ================= レイアウト ================= */
+function buildStrips(){
+  leaf.innerHTML=''; strips=[];
+  stripW=pageW/STRIPS;
+  for(let k=0;k<STRIPS;k++){
+    const el=document.createElement('div'); el.className='strip';
+    el.style.width=(stripW+OV)+'px';
+    const f=document.createElement('div'); f.className='face f';
+    const b=document.createElement('div'); b.className='face b';
+    el.appendChild(f); el.appendChild(b); leaf.appendChild(el);
+    strips.push({el,f,b});
+  }
+}
+function cancelTransition(){
+  if(tr){ tr=null; pending=0; }
+  leafTok++; leaf.style.display='none';
+}
+function layout(){
+  if(!pdf) return;
+  cancelTransition();
+  const keepPage=states.length?pageOfState(cur):0;
+  const m=decideMode();
+  if(m!==mode || !states.length){
+    mode=m; states=buildStates(mode); cur=stateOfPage(keepPage);
+  }
+  const sw=stage.clientWidth, sh=stage.clientHeight;
+  const pad=mode==='spread'?10:0, cols=mode==='spread'?2:1;
+  let pw=Math.floor(Math.min((sw-pad*2)/cols,(sh-pad*2)*ratio));
+  pw=Math.max(pw,60);
+  pageW=pw; pageH=Math.round(pw/ratio);
+
+  book.style.width=(mode==='spread'?pageW*2:pageW)+'px';
+  book.style.height=pageH+'px';
+  book.style.perspective=Math.round(pageW*3.5)+'px';
+  slotL.style.display=shadeL.style.display=(mode==='spread')?'block':'none';
+  const rx=(mode==='spread')?pageW:0;
+  for(const el of [slotL,shadeL]){ el.style.left='0px'; el.style.width=pageW+'px'; }
+  for(const el of [slotR,shadeR]){ el.style.left=rx+'px'; el.style.width=pageW+'px'; }
+  leaf.style.left=rx+'px';
+  if(mode==='spread'){
+    const cw=Math.round(pageW*0.07);
+    crease.style.display='block'; crease.style.width=cw+'px'; crease.style.left=(pageW-cw/2)+'px';
+  }else crease.style.display='none';
+
+  buildStrips();
+  setRest(cur); updateUI();
+  ensureImages([states[cur].l,states[cur].r]).then(()=>{ if(!tr) setRest(cur); });
+  prefetch();
+}
+
+/* ================= めくりアニメーション ================= */
+const LX=-0.301, LZ=0.954, LFLAT=LZ;    // 光源方向(法線との内積で陰影)
+async function beginTransition(dir){
+  if(tr) return null;
+  const to=cur+dir; if(to<0||to>=states.length) return null;
+  const lo=Math.min(cur,to), hi=lo+1;
+  const t={dir,from:cur,to,lo,hi,ready:false,tau:0,L:(mode==='single')?0.85:0.5};
+  if(mode==='single'){ t.front=states[lo].r; t.back='back'; t.sl='none'; t.sr=states[hi].r; }
+  else { t.front=states[lo].r; t.back=states[hi].l; t.sl=states[lo].l; t.sr=states[hi].r; }
+  tr=t;
+  await ensureImages([t.front,t.back,t.sl,t.sr]);
+  if(tr!==t) return null;
+  leafTok++;
+  paintSlot(slotL,t.sl); paintSlot(slotR,t.sr);
+  for(let k=0;k<STRIPS;k++){
+    paintFace(strips[k].f,t.front,-k*stripW);
+    paintFace(strips[k].b,t.back,-((STRIPS-1-k)*stripW-OV));
+  }
+  leaf.style.display='block';
+  t.ready=true;
+  applyFrame(0);
+  return t;
+}
+function applyFrame(tau){
+  const t=tr; if(!t||!t.ready) return;
+  t.tau=tau;
+  const fwd=t.dir>0, L=t.L;
+  let x=0,z=0,sum=0;
+  for(let k=0;k<STRIPS;k++){
+    const f=(k+0.5)/STRIPS;
+    let u=tau*(1+L)-L*(1-f);               // 外側の端が先行して反り上がる
+    u=u<0?0:(u>1?1:u); u=u*u*(3-2*u);
+    const a=fwd?180*u:180*(1-u);           // 0°=右に平置き 180°=左に平置き
+    const r=a*Math.PI/180, sn=Math.sin(r), cs=Math.cos(r);
+    const front=cs>=0;
+    const nx=front?-sn:sn, nz=front?cs:-cs;
+    let lum=nx*LX+nz*LZ; if(lum<0) lum=0;
+    let sh=(LFLAT-lum)*0.6; if(sh<0) sh=0;
+    const st=strips[k].el.style;
+    st.transform=`translate3d(${x.toFixed(2)}px,0,${(z+0.5).toFixed(2)}px) rotateY(${(-a).toFixed(2)}deg)`;
+    st.setProperty('--sh',sh.toFixed(3));
+    x+=stripW*cs; z+=stripW*sn; sum+=a;
+  }
+  const p=sum/(STRIPS*180);
+  const sp=Math.sin(Math.PI*p)*0.9;
+  shadeR.style.opacity=sp.toFixed(3);
+  if(mode==='spread') shadeL.style.opacity=sp.toFixed(3);
+  const sA=shiftOf(t.lo), sB=shiftOf(t.hi);
+  book.style.transform=`translateX(${(sA+(sB-sA)*p).toFixed(2)}px)`;
+}
+function animateTau(t,from,to,dur){
+  return new Promise(res=>{
+    const t0=performance.now();
+    const step=now=>{
+      if(tr!==t){ res(false); return; }
+      let k=(now-t0)/dur;
+      if(k>=1){ applyFrame(to); res(true); return; }
+      if(k<0) k=0;
+      const e=0.5-0.5*Math.cos(Math.PI*k);
+      applyFrame(from+(to-from)*e);
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+function finishTransition(t,commit){
+  if(tr!==t) return;
+  if(commit) cur=t.to;
+  tr=null;
+  setRest(cur); updateUI();
+  const tok=++leafTok;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(tok===leafTok && !tr) leaf.style.display='none'; }));
+  prefetch();
+  if(pending){ const d=pending; pending=0; go(d); }
+}
+async function go(dir){
+  if(fatal||!pdf) return;
+  if(tr){ pending=dir; return; }
+  if(pd&&pd.dragging) return;
+  const t=await beginTransition(dir);
+  if(!t) return;
+  const ok=await animateTau(t,0,1,DURATION);
+  if(ok) finishTransition(t,true);
+}
+
+/* ================= 操作 ================= */
+btnPrev.addEventListener('click',()=>go(-1));
+btnNext.addEventListener('click',()=>go(1));
+addEventListener('keydown',e=>{
+  if(e.altKey||e.ctrlKey||e.metaKey) return;
+  if(e.key==='ArrowRight'||e.key==='PageDown') go(1);
+  else if(e.key==='ArrowLeft'||e.key==='PageUp') go(-1);
+  else return;
+  e.preventDefault();
+});
+
+stage.addEventListener('pointerdown',e=>{
+  if(fatal||!pdf||(e.pointerType==='mouse'&&e.button!==0)) return;
+  pd={id:e.pointerId,x0:e.clientX,y0:e.clientY,t0:performance.now(),dragging:false,blocked:false,hist:[]};
+  try{stage.setPointerCapture(e.pointerId);}catch(_){}
+});
+stage.addEventListener('pointermove',e=>{
+  if(!pd||e.pointerId!==pd.id) return;
+  const dx=e.clientX-pd.x0, dy=e.clientY-pd.y0, now=performance.now();
+  if(!pd.dragging && !pd.blocked){
+    if(Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy)*1.2){
+      const dir=dx<0?1:-1;
+      if(tr || cur+dir<0 || cur+dir>=states.length){ pd.blocked=true; return; }
+      pd.dragging=true; pd.dir=dir; pd.startX=e.clientX; pd.tau=0;
+      pd.range=(mode==='spread')?pageW*1.1:pageW*0.9;
+      stage.classList.add('grabbing');
+      pd.readyP=beginTransition(dir).then(t=>{ if(t) applyFrame(pd?pd.tau:0); return t; });
+    }
+  }
+  if(pd.dragging){
+    let tau=-(e.clientX-pd.startX)*pd.dir/pd.range;
+    tau=tau<0?0:(tau>1?1:tau);
+    pd.tau=tau;
+    pd.hist.push([now,tau]); while(pd.hist.length>1 && now-pd.hist[0][0]>100) pd.hist.shift();
+    if(tr&&tr.ready) applyFrame(tau);
+  }
+});
+async function endPointer(e,cancelled){
+  if(!pd||e.pointerId!==pd.id) return;
+  const p=pd; pd=null;
+  stage.classList.remove('grabbing');
+  try{stage.releasePointerCapture(e.pointerId);}catch(_){}
+  if(p.dragging){
+    const t=await p.readyP; if(!t||tr!==t) return;
+    let v=0;
+    if(p.hist.length>1){ const a=p.hist[0], b=p.hist[p.hist.length-1]; if(b[0]>a[0]) v=(b[1]-a[1])/(b[0]-a[0]); }
+    const commit=!cancelled && (p.tau>0.35 || (v>0.0008 && p.tau>0.04));
+    const target=commit?1:0;
+    const dur=Math.max(200,DURATION*Math.abs(target-p.tau));
+    const ok=await animateTau(t,p.tau,target,dur);
+    if(ok) finishTransition(t,commit);
+  }else if(!cancelled && !p.blocked){
+    const dx=e.clientX-p.x0, dy=e.clientY-p.y0;
+    if(Math.hypot(dx,dy)<10 && performance.now()-p.t0<600){
+      const r=stage.getBoundingClientRect();
+      go(e.clientX<r.left+r.width/2?-1:1);
+    }
+  }
+}
+stage.addEventListener('pointerup',e=>endPointer(e,false));
+stage.addEventListener('pointercancel',e=>endPointer(e,true));
+
+let rzTimer=0;
+function onResize(){ clearTimeout(rzTimer); rzTimer=setTimeout(layout,120); }
+addEventListener('resize',onResize);
+addEventListener('orientationchange',onResize);
+if('ResizeObserver' in window) new ResizeObserver(onResize).observe(stage);
+
+/* ================= 起動 ================= */
+async function init(){
+  if(location.protocol==='file:'){
+    fail('このファイルは直接開けません（file://）',
+      'ブラウザの制限により、PDFを直接読み込めません。GitHub Pages などWebサーバー経由で開くか、ローカルサーバー（例: python -m http.server）で確認してください。');
+    return;
+  }
+  let cdn;
+  try{ cdn=await loadPdfJs(); }
+  catch(e){
+    fail('PDF.js の読み込みに失敗しました',
+      'CDN（jsDelivr / cdnjs）に接続できませんでした。ネットワーク接続、広告ブロッカー、社内フィルタの設定を確認してください。');
+    return;
+  }
+  try{
+    const opts={url:PDF_URL};
+    if(cdn.base){ opts.cMapUrl=cdn.base+'cmaps/'; opts.cMapPacked=true; opts.standardFontDataUrl=cdn.base+'standard_fonts/'; }
+    pdf=await window.pdfjsLib.getDocument(opts).promise;
+  }catch(e){
+    const n=e&&e.name, m=(e&&e.message)||String(e);
+    if(n==='MissingPDFException')
+      fail(`${PDF_URL} が見つかりません（404）`,`index.html と同じフォルダに ${PDF_URL} をアップロードしているか、ファイル名（大文字小文字も含む）を確認してください。`);
+    else if(n==='InvalidPDFException')
+      fail(`${PDF_URL} が壊れているか、PDFとして読み込めません`,'PDFファイルを再度書き出してアップロードし直してください。');
+    else if(n==='PasswordException')
+      fail(`${PDF_URL} にパスワードが設定されています`,'パスワードなしのPDFをアップロードしてください。');
+    else if(n==='UnexpectedResponseException')
+      fail(`${PDF_URL} を取得できませんでした`,`サーバーの応答: ${m}`);
+    else
+      fail(`${PDF_URL} の読み込みに失敗しました`,`原因: ${m}（ネットワーク接続やCORS設定を確認してください）`);
+    console.error(e);
+    return;
+  }
+  N=pdf.numPages;
+  try{
+    const p1=await pdf.getPage(1); const v=p1.getViewport({scale:1}); ratio=v.width/v.height;
+  }catch(e){ fail('PDFの1ページ目を読み込めませんでした',(e&&e.message)||''); return; }
+  layout();
+  await ensureImages([states[cur].l,states[cur].r]);
+  if(!tr) setRest(cur);
+  overlay.classList.add('hidden');
+  updateUI(); prefetch();
+}
+init();
+})();
+</script>
 </body>
 </html>
