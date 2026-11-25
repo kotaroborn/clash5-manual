@@ -25,6 +25,9 @@ html,body{height:100%;background:#0b0b0d;color:#e6e6e6;overflow:hidden;
 #crease{position:absolute;top:0;height:100%;pointer-events:none;display:none;
   background:linear-gradient(90deg,rgba(0,0,0,0),rgba(0,0,0,.28) 50%,rgba(0,0,0,0))}
 
+#zoomer{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform-origin:50% 50%;will-change:transform}
+#zoomer.anim{transition:transform .22s ease-out}
+
 /* ---- めくり用の紙（細い短冊を並べて湾曲させる） ---- */
 #leaf{position:absolute;top:0;left:0;width:0;height:100%;display:none;pointer-events:none;transform-style:preserve-3d}
 .strip{position:absolute;left:0;top:0;height:100%;transform-style:preserve-3d;transform-origin:0 50%;will-change:transform}
@@ -40,11 +43,13 @@ html,body{height:100%;background:#0b0b0d;color:#e6e6e6;overflow:hidden;
   font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #bar button:disabled{opacity:.3;cursor:default}
 #bar button:not(:disabled):active{background:#2c2c38}
+#bar button.zb{min-width:44px;width:44px;padding:0;font-size:22px;line-height:1;flex:none}
 #pageLabel{min-width:96px;text-align:center;font-variant-numeric:tabular-nums;font-size:14px;color:#cfcfd6}
 @media (max-width:700px){
   #bar{gap:8px;padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
   #bar button{flex:1;max-width:150px;min-width:0;height:40px}
-  #pageLabel{min-width:84px}
+  #bar button.zb{flex:none;width:40px;min-width:40px}
+  #pageLabel{min-width:70px;font-size:13px}
 }
 
 /* ---- 読み込み・エラー表示 ---- */
@@ -62,19 +67,21 @@ html,body{height:100%;background:#0b0b0d;color:#e6e6e6;overflow:hidden;
 <body>
 <div id="app">
   <main id="stage">
-    <div id="book">
+    <div id="zoomer"><div id="book">
       <div class="slot" id="slotL"></div>
       <div class="slot" id="slotR"></div>
       <div class="shade" id="shadeL"></div>
       <div class="shade" id="shadeR"></div>
       <div id="leaf"></div>
       <div id="crease"></div>
-    </div>
+    </div></div>
     <div id="overlay"><div class="spinner"></div><p id="ovMsg">マニュアルを読み込み中…</p><p id="ovSub"></p></div>
   </main>
   <nav id="bar">
     <button id="btnPrev" type="button" aria-label="前のページへ戻る" disabled>◀ 戻る</button>
+    <button id="btnZout" class="zb" type="button" aria-label="縮小" disabled>－</button>
     <span id="pageLabel" aria-live="polite">- / -</span>
+    <button id="btnZin" class="zb" type="button" aria-label="拡大" disabled>＋</button>
     <button id="btnNext" type="button" aria-label="次のページへ進む" disabled>進む ▶</button>
   </nav>
 </div>
@@ -104,7 +111,8 @@ const $ = id => document.getElementById(id);
 const stage=$('stage'), book=$('book'), slotL=$('slotL'), slotR=$('slotR'),
       shadeL=$('shadeL'), shadeR=$('shadeR'), leaf=$('leaf'), crease=$('crease'),
       overlay=$('overlay'), ovMsg=$('ovMsg'), ovSub=$('ovSub'),
-      btnPrev=$('btnPrev'), btnNext=$('btnNext'), pageLabel=$('pageLabel');
+      btnPrev=$('btnPrev'), btnNext=$('btnNext'), pageLabel=$('pageLabel'),
+      zoomer=$('zoomer'), btnZin=$('btnZin'), btnZout=$('btnZout');
 
 /* ================= 状態 ================= */
 let pdf=null, N=0, ratio=210/297;
@@ -160,9 +168,10 @@ function pump(){
     j.fn().then(j.res,()=>j.res(null)).finally(()=>{active--;pump();});
   }
 }
-function targetPx(){
+function targetPx(b){
+  b=b||1;
   const dpr=Math.min(window.devicePixelRatio||1,2.5);
-  return Math.min(2400,Math.max(700,Math.ceil(pageW*dpr/200)*200));
+  return Math.min(b>1?2800:2400,Math.max(700,Math.ceil(pageW*dpr*b/200)*200));
 }
 async function renderPage(i,need){
   try{
@@ -180,8 +189,8 @@ async function renderPage(i,need){
     return blob?URL.createObjectURL(blob):null;
   }catch(e){ console.error('page render failed',i+1,e); return null; }
 }
-function getImage(p,urgent){
-  const need=targetPx();
+function getImage(p,urgent,b){
+  const need=targetPx(b);
   const e=cache.get(p);
   if(e && e.w>=need*0.85){
     if(urgent && e.job){ const k=queue.indexOf(e.job); if(k>0){queue.splice(k,1);queue.unshift(e.job);} }
@@ -199,8 +208,8 @@ function getImage(p,urgent){
 }
 const urlOf=p=>{const e=cache.get(p);return e&&e.url||null;};
 const isPage=v=>typeof v==='number';
-function ensureImages(types){
-  return Promise.all(types.filter(isPage).map(p=>getImage(p,true)));
+function ensureImages(types,b){
+  return Promise.all(types.filter(isPage).map(p=>getImage(p,true,b)));
 }
 function prefetch(){
   const keep=new Set();
@@ -341,7 +350,8 @@ function layout(){
   }else crease.style.display='none';
 
   buildStrips();
-  setRest(cur); updateUI();
+  setRest(cur); updateUI(); clampPan(); applyZoom(false);
+  clearTimeout(hiTimer); hiTimer=setTimeout(refreshHiRes,300);
   ensureImages([states[cur].l,states[cur].r]).then(()=>{ if(!tr) setRest(cur); });
   prefetch();
 }
@@ -425,6 +435,14 @@ async function go(dir){
   if(fatal||!pdf) return;
   if(tr){ pending=dir; return; }
   if(pd&&pd.dragging) return;
+  if(pinch) return;
+  if(zoom>1.01){
+    if(zoomBusy) return;
+    zoomBusy=true; zoom=1; zx=zy=0; applyZoom(true);
+    await new Promise(r=>setTimeout(r,230));
+    zoomBusy=false;
+    if(tr){ pending=dir; return; }
+  }
   const t=await beginTransition(dir);
   if(!t) return;
   const ok=await animateTau(t,0,1,DURATION);
@@ -438,16 +456,113 @@ addEventListener('keydown',e=>{
   if(e.altKey||e.ctrlKey||e.metaKey) return;
   if(e.key==='ArrowRight'||e.key==='PageDown') go(1);
   else if(e.key==='ArrowLeft'||e.key==='PageUp') go(-1);
+  else if(e.key==='+'||e.key==='=') zoomStep(1.5);
+  else if(e.key==='-'||e.key==='_') zoomStep(1/1.5);
+  else if(e.key==='0'){ const r=stage.getBoundingClientRect(); zoomAt(1,r.left,r.top,true); settleZoom(); }
   else return;
   e.preventDefault();
 });
 
+/* ---- ズーム（ピンチ / ダブルタップ / ホイール / ボタン） ---- */
+const MAXZ=4;
+let zoom=1, zx=0, zy=0, zoomBusy=false;
+const ptrs=new Map();           // pointerId -> {x,y,x0,y0,t0,moved}
+let pinch=null, pan=null, lastTap={t:0,x:0,y:0}, hiTimer=0;
+
+function clampPan(){
+  if(zoom<=1.001){ zoom=1; zx=zy=0; return; }
+  const sw=stage.clientWidth, sh=stage.clientHeight, st=states[cur]||{};
+  const single=(mode==='spread'&&(st.l==='none'||st.r==='none'));
+  const vw=(mode==='spread'&&!single)?pageW*2:pageW;
+  const lx=Math.max(0,(vw*zoom-sw)/2), ly=Math.max(0,(pageH*zoom-sh)/2);
+  zx=Math.min(lx,Math.max(-lx,zx)); zy=Math.min(ly,Math.max(-ly,zy));
+}
+function updateZoomUI(){
+  btnZin.disabled=fatal||zoom>=MAXZ-0.01;
+  btnZout.disabled=fatal||zoom<=1.01;
+}
+function applyZoom(anim){
+  zoomer.classList.toggle('anim',!!anim);
+  zoomer.style.transform=`translate(${zx.toFixed(1)}px,${zy.toFixed(1)}px) scale(${zoom.toFixed(4)})`;
+  updateZoomUI();
+}
+function zoomAt(z2,cx,cy,anim){
+  z2=Math.min(MAXZ,Math.max(1,z2));
+  const r=stage.getBoundingClientRect();
+  const rx=cx-(r.left+r.width/2), ry=cy-(r.top+r.height/2), k=z2/zoom;
+  zx=rx-(rx-zx)*k; zy=ry-(ry-zy)*k; zoom=z2;
+  clampPan(); applyZoom(anim);
+}
+function zoomStep(f){
+  const r=stage.getBoundingClientRect();
+  zoomAt(zoom*f,r.left+r.width/2,r.top+r.height/2,true); settleZoom();
+}
+function refreshHiRes(){
+  if(!pdf||tr||zoom<=1.15) return;
+  const b=Math.min(MAXZ,Math.ceil(zoom)), st=states[cur]; if(!st) return;
+  ensureImages([st.l,st.r],b).then(()=>{ if(!tr) setRest(cur); });
+}
+function settleZoom(){
+  if(zoom<1.03){ zoom=1; zx=zy=0; }
+  clampPan(); applyZoom(false); updateZoomUI();
+  clearTimeout(hiTimer); hiTimer=setTimeout(refreshHiRes,220);
+}
+btnZin.addEventListener('click',()=>zoomStep(1.5));
+btnZout.addEventListener('click',()=>zoomStep(1/1.5));
+stage.addEventListener('wheel',e=>{
+  if(fatal||!pdf) return;
+  e.preventDefault();
+  zoomAt(zoom*Math.exp(-e.deltaY*(e.ctrlKey?0.01:0.0015)),e.clientX,e.clientY,false);
+  settleZoom();
+},{passive:false});
+
+function startPinch(a,b){
+  const r=stage.getBoundingClientRect();
+  const mx=(a.x+b.x)/2-(r.left+r.width/2), my=(a.y+b.y)/2-(r.top+r.height/2);
+  pinch={d0:Math.max(10,Math.hypot(a.x-b.x,a.y-b.y)),z0:zoom,cx:(mx-zx)/zoom,cy:(my-zy)/zoom};
+  a.moved=b.moved=true;
+}
+function handleTap(rec,e,cancelled){
+  const now=performance.now();
+  if(cancelled||!rec||rec.moved||now-rec.t0>500) return;
+  if(now-lastTap.t<320&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<40){
+    lastTap.t=0;
+    zoomAt(zoom>1.05?1:2.5,e.clientX,e.clientY,true); settleZoom();
+  }else lastTap={t:now,x:e.clientX,y:e.clientY};
+}
+
+/* ---- ポインタ操作 ---- */
 stage.addEventListener('pointerdown',e=>{
   if(fatal||!pdf||(e.pointerType==='mouse'&&e.button!==0)) return;
-  pd={id:e.pointerId,x0:e.clientX,y0:e.clientY,t0:performance.now(),dragging:false,blocked:false,hist:[]};
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,t0:performance.now(),moved:false});
   try{stage.setPointerCapture(e.pointerId);}catch(_){}
+  if(ptrs.size===2){
+    if(tr||(pd&&pd.dragging)) return;
+    pd=null; pan=null;
+    const [a,b]=[...ptrs.values()]; startPinch(a,b);
+    return;
+  }
+  if(ptrs.size>2) return;
+  if(zoom>1.01){ pan={id:e.pointerId,x:e.clientX,y:e.clientY,px0:zx,py0:zy}; return; }
+  pd={id:e.pointerId,x0:e.clientX,y0:e.clientY,t0:performance.now(),dragging:false,blocked:false,hist:[]};
 });
 stage.addEventListener('pointermove',e=>{
+  const rec=ptrs.get(e.pointerId);
+  if(rec){ rec.x=e.clientX; rec.y=e.clientY; if(Math.hypot(rec.x-rec.x0,rec.y-rec.y0)>10) rec.moved=true; }
+  if(pinch&&ptrs.size>=2){
+    const [a,b]=[...ptrs.values()];
+    const r=stage.getBoundingClientRect();
+    const mx=(a.x+b.x)/2-(r.left+r.width/2), my=(a.y+b.y)/2-(r.top+r.height/2);
+    zoom=Math.min(MAXZ,Math.max(1,pinch.z0*Math.hypot(a.x-b.x,a.y-b.y)/pinch.d0));
+    zx=mx-pinch.cx*zoom; zy=my-pinch.cy*zoom;
+    clampPan(); applyZoom(false);
+    return;
+  }
+  if(pan&&e.pointerId===pan.id){
+    zx=pan.px0+(e.clientX-pan.x); zy=pan.py0+(e.clientY-pan.y);
+    clampPan(); applyZoom(false);
+    return;
+  }
   if(!pd||e.pointerId!==pd.id) return;
   const dx=e.clientX-pd.x0, dy=e.clientY-pd.y0, now=performance.now();
   if(!pd.dragging && !pd.blocked){
@@ -469,10 +584,20 @@ stage.addEventListener('pointermove',e=>{
   }
 });
 async function endPointer(e,cancelled){
+  const rec=ptrs.get(e.pointerId); ptrs.delete(e.pointerId);
+  try{stage.releasePointerCapture(e.pointerId);}catch(_){}
+  if(pinch){
+    if(ptrs.size<2){
+      pinch=null; settleZoom();
+      const rem=[...ptrs.entries()][0];
+      if(rem&&zoom>1.01){ pan={id:rem[0],x:rem[1].x,y:rem[1].y,px0:zx,py0:zy}; rem[1].moved=true; }
+    }
+    return;
+  }
+  if(pan&&e.pointerId===pan.id){ pan=null; settleZoom(); handleTap(rec,e,cancelled); return; }
   if(!pd||e.pointerId!==pd.id) return;
   const p=pd; pd=null;
   stage.classList.remove('grabbing');
-  try{stage.releasePointerCapture(e.pointerId);}catch(_){}
   if(p.dragging){
     const t=await p.readyP; if(!t||tr!==t) return;
     let v=0;
@@ -482,13 +607,7 @@ async function endPointer(e,cancelled){
     const dur=Math.max(200,DURATION*Math.abs(target-p.tau));
     const ok=await animateTau(t,p.tau,target,dur);
     if(ok) finishTransition(t,commit);
-  }else if(!cancelled && !p.blocked){
-    const dx=e.clientX-p.x0, dy=e.clientY-p.y0;
-    if(Math.hypot(dx,dy)<10 && performance.now()-p.t0<600){
-      const r=stage.getBoundingClientRect();
-      go(e.clientX<r.left+r.width/2?-1:1);
-    }
-  }
+  }else handleTap(rec,e,cancelled);
 }
 stage.addEventListener('pointerup',e=>endPointer(e,false));
 stage.addEventListener('pointercancel',e=>endPointer(e,true));
